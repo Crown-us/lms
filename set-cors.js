@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
-dotenv.config();
+
 const client = new S3Client({
     region: "auto",
     endpoint: "https://fly.storage.tigris.dev",
