@@ -66,8 +66,8 @@ export default function CourseCreationPage() {
             title: "",
             description: "",
             fileKey: "",
-            price: 0, // Ubah dari 1 ke 0 atau sesuaikan dengan schema
-            duration: 0, // Ubah dari 3 ke 0 atau sesuaikan dengan schema
+            price: undefined, // Ubah dari 0 ke undefined
+            duration: undefined, // Ubah dari 0 ke undefined
             level: "Beginner",
             category: "",
             status: "Draft",
@@ -90,7 +90,7 @@ export default function CourseCreationPage() {
         }
     };
 
-    const onSubmit = async (data: CourseFormType) => {
+    const onSubmit = async (data: CourseSchemaType) => {
         try {
             // Transform data menggunakan courseSchema untuk validasi final
             const transformedData = courseSchema.parse({
@@ -209,7 +209,7 @@ export default function CourseCreationPage() {
                                         <FormItem>
                                             <FormLabel>Thumbnail Image</FormLabel>
                                             <FormControl>
-                                                <Uploader />
+                                                <Uploader onChange={field.onChange} value={field.value} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -280,6 +280,7 @@ export default function CourseCreationPage() {
                                 />
                             </CardContent>
                         </Card>
+
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
@@ -302,7 +303,11 @@ export default function CourseCreationPage() {
                                                     type="number"
                                                     placeholder="299000"
                                                     {...field}
-                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                    value={field.value || ""}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        field.onChange(value === "" ? undefined : Number(value));
+                                                    }}
                                                 />
                                             </FormControl>
                                             <FormMessage />
@@ -314,13 +319,17 @@ export default function CourseCreationPage() {
                                     name="duration"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Duration (Hours)</FormLabel>
+                                            <FormLabel>Duration (Minutes)</FormLabel>
                                             <FormControl>
                                                 <Input
                                                     type="number"
                                                     placeholder="120"
                                                     {...field}
-                                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                                    value={field.value || ""}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        field.onChange(value === "" ? undefined : Number(value));
+                                                    }}
                                                 />
                                             </FormControl>
                                             <FormMessage />

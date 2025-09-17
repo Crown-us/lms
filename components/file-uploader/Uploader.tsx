@@ -21,7 +21,12 @@ interface UploaderState {
     fileType: "image" | "video";
 }
 
-export function Uploader() {
+interface iAppProps{
+    value?: string;
+    onChange?: (value: string) => void;
+}
+
+export function Uploader({onChange, value  }: iAppProps) {
 
     const [fileState, setFileState] = useState<UploaderState>({
         error: false,
@@ -164,6 +169,8 @@ export function Uploader() {
                             key: key,
                         }))
 
+                        onChange?.(key);
+
                         toast.success("File uploaded successfully.");
                         resolve()
                     } else{
@@ -261,6 +268,7 @@ export function Uploader() {
         maxFiles: 1,
         multiple: false,
         maxSize: 5 * 1024 * 1024, // 5MB
+        disabled: fileState.isDeleting || !!fileState.objectUrl,
     });
 
     return (
