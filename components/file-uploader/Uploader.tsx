@@ -1,14 +1,13 @@
 "use client";
 
 import {FileRejection, useDropzone} from 'react-dropzone';
-import {useCallback, useState} from "react";
+import {useCallback, useState, useEffect} from "react";
 
 import { Card, CardContent } from "../ui/card";
 import { cn } from "@/lib/utils";
-import {RenderEmptyState, RenderErrorState} from "@/components/file-uploader/RenderState";
+import {RenderEmptyState, RenderErrorState, RenderUploadingState, RenderUploadedState} from "@/components/file-uploader/RenderState";
 import {toast} from "sonner";
 import { v4 as uuidv4 } from "uuid";
-
 
 interface UploaderState {
     id: string | null;
@@ -20,9 +19,8 @@ interface UploaderState {
     error: boolean;
     objectUrl?: string;
     fileType: "image" | "video";
-
-
 }
+
 export function Uploader() {
 
     const [fileState, setFileState] = useState<UploaderState>({
@@ -35,6 +33,81 @@ export function Uploader() {
         fileType: "image",
     });
 
+    // Cleanup object URL untuk mencegah memory leak
+    useEffect(() => {
+        return () => {
+            if (fileState.objectUrl) {
+                URL.revokeObjectURL(fileState.objectUrl);
+            }
+        };
+    }, [fileState.objectUrl]);
+
+    async function removeFile() {
+        if (fileState.objectUrl) {
+            URL.revokeObjectURL(fileState.objectUrl);
+        }
+
+        // Delete from S3 if key exists
+        if (fileState.key) {
+            try {
+                const response = await fetch('/api/s3/delete', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        key: fileState.key,
+                    }),
+                });
+
+                if (!response.ok) {
+                    toast.error("Failed to remove file from storage");
+
+                    setFileState((prev)=> ({
+                        ...prev,
+                        isDeleting: true,
+                        error: true,
+                    }))
+
+                    return;
+                }
+
+                if (fileState.objectUrl && !fileState.objectUrl?.startsWith("http")) {
+                    URL.revokeObjectURL(fileState.objectUrl);
+                }
+
+                setFileState(()=> ({
+                    file: null,
+                    uploading: false,
+                    progress: 0,
+                    objectUrl: undefined,
+                    error: false,
+                    fileType: "image",
+                    id: null,
+                    isDeleting: true,
+                }))
+
+                toast.success("File removed successfully.");
+
+            } catch (error) {
+                toast.error("Error removing file. please try again later.");
+
+                setFileState((prev)=> ({
+                    ...prev,
+                    isDeleting: true,
+                    error: true,
+                }))
+            }
+        }
+
+        setFileState({
+            error: false,
+            file: null,
+            id: null,
+            uploading: false,
+            progress: 0,
+            isDeleting: false,
+            fileType: "image",
+        });
+    }
 
     async function uploadFile(file: File) {
         setFileState((prev)=> ({
@@ -44,9 +117,7 @@ export function Uploader() {
         }))
 
         try {
-
             //1. get presigned url
-
             const presignedResponse = await fetch("/api/s3/upload", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -66,9 +137,9 @@ export function Uploader() {
                     progress: 0,
                     error: true,
                 }))
-
                 return;
             }
+
             const {presignedUrl, key} = await presignedResponse.json();
 
             await new Promise<void>((resolve, reject) => {
@@ -81,8 +152,6 @@ export function Uploader() {
                             ...prev,
                             progress: Math.round(percentComplete)
                         }))
-
-
                     }
                 }
 
@@ -96,14 +165,12 @@ export function Uploader() {
                         }))
 
                         toast.success("File uploaded successfully.");
-
                         resolve()
                     } else{
                         reject(new Error('Upload failed...'));
                     }
-
-
                 }
+
                 xhr.onerror = () => {
                     reject(new Error('Upload failed...'));
                 }
@@ -127,6 +194,13 @@ export function Uploader() {
     const onDropAccepted = useCallback((acceptedFiles: File[]) => {
         if(acceptedFiles.length > 0) {
             const file = acceptedFiles[0]
+
+            // Cleanup previous object URL jika ada
+            if (fileState.objectUrl && !fileState.objectUrl?.startsWith("http")) {
+                URL.revokeObjectURL(fileState.objectUrl);
+            }
+
+            // Set file state dengan benar
             setFileState({
                 file: file,
                 uploading: false,
@@ -135,14 +209,13 @@ export function Uploader() {
                 error: false,
                 id: uuidv4(),
                 isDeleting: false,
-                fileType:"image",
+                fileType: "image",
+            });
 
-            })
-            uploadFile(file)
+            uploadFile(file);
         }
-    }, []);
+    }, [fileState.objectUrl]); // Tambahkan dependency
 
-    // PENYESUAIAN 2: Perbaiki logika pengecekan error.
     const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
         // Kita hanya perlu cek error dari file pertama yang ditolak.
         const firstRejection = fileRejections[0];
@@ -163,21 +236,25 @@ export function Uploader() {
 
     function renderContent(){
         if(fileState.uploading){
-            return <h1>uploading...</h1>
+            return <RenderUploadingState progress={fileState.progress} file={fileState.file!} />
         }
         if(fileState.error){
             return <RenderErrorState/>
         }
 
         if(fileState.objectUrl){
-            return <h1>Uploaded file</h1>
+            return (
+                <RenderUploadedState
+                    onRemove={removeFile}
+                    previewUrl={fileState.objectUrl}
+                />
+            )
         }
 
         return <RenderEmptyState isDragActive={isDragActive}/>
     }
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        // PENYESUAIAN 3: Gunakan prop yang lebih spesifik
         onDropAccepted: onDropAccepted,
         onDropRejected: onDropRejected,
         accept: { "image/*": [] },
@@ -190,7 +267,7 @@ export function Uploader() {
         <Card
             {...getRootProps()}
             className={cn(
-                "relative border-2 border-dashed transition-colors duration-200 ease-in-out w-full h-64 cursor-pointer", // cursor-pointer sebaiknya ada
+                "relative border-2 border-dashed transition-colors duration-200 ease-in-out w-full h-64 cursor-pointer",
                 isDragActive
                     ? 'border-primary bg-primary/10 border-solid'
                     : 'border-border hover:border-primary'
@@ -198,7 +275,6 @@ export function Uploader() {
         >
             <CardContent className="flex flex-col items-center justify-center h-full w-full text-center">
                 <input {...getInputProps()} />
-
                 {renderContent()}
             </CardContent>
         </Card>
