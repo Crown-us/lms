@@ -43,6 +43,11 @@ import {
     CourseSchemaType,
 } from "@/lib/zodSchemas";
 import {Uploader} from "@/components/file-uploader/Uploader";
+import {useTransition} from "react";
+import {tryCatch} from "@/hooks/try-catch";
+import {CreateCourse} from "@/app/admin/courses/create/action";
+import {toast} from "sonner";
+import {useRouter} from "next/navigation";
 
 // Data Kategori
 const courseCategories = [
@@ -60,6 +65,9 @@ const RichTextEditor = dynamic(() => import('@/components/rich-text-editor/Edito
 });
 
 export default function CourseCreationPage() {
+    const [isPending, startTransition] = useTransition();
+    const router = useRouter();
+
     const form = useForm<CourseSchemaType>({
         resolver: zodResolver(courseSchema),
         defaultValues: {
@@ -91,19 +99,23 @@ export default function CourseCreationPage() {
     };
 
     const onSubmit = async (data: CourseSchemaType) => {
-        try {
-            // Transform data menggunakan courseSchema untuk validasi final
-            const transformedData = courseSchema.parse({
-                ...data,
-                price: Number(data.price),
-                duration: Number(data.duration),
-            });
+        startTransition(async () => {
+            const { data: result, error } = await tryCatch(CreateCourse(data))
 
-            console.log("Submitted Data:", transformedData);
-            // Tambahkan API call di sini dengan transformedData
-        } catch (error) {
-            console.error("Error submitting form:", error);
-        }
+            if(error){
+                toast.error("An unexpected error occurred. Please try again.")
+                return;
+            }
+
+            if(result.status === 'success'){
+                toast.success(result.message)
+                form.reset()
+                router.push("/admin/courses");
+
+            } else if(result.status === 'error'){
+                toast.error(result.message)
+            }
+        })
     };
 
     return (

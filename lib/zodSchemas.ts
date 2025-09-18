@@ -10,7 +10,7 @@ export const courseLevels = [
 export const coursesStatus = [
     "Draft",
     "Published",
-    "Archived",
+    "Archive",
 ] as const;
 
 export const courseCategories = [
