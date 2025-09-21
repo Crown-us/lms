@@ -5,6 +5,10 @@ import {env} from "@/lib/env";
 import { v4 as uuid } from "uuid";
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner'
 import {S3} from "@/lib/S3Client";
+import arcjet from "@/lib/arcjet";
+import {detectBot, fixedWindow} from "@arcjet/next";
+import {getSession} from "better-auth/api";
+import {requireAdmin} from "@/app/data/admin/require-admin";
 
 export const fileUploadSchema = z.object({
     fileName: z.string().min(1, { message: "Filename is required" }),
@@ -13,7 +17,23 @@ export const fileUploadSchema = z.object({
     isImage: z.boolean(),
 })
 
+const aj = arcjet.withRule(
+    detectBot({
+        mode: 'LIVE',
+        allow: [],
+    })
+
+).withRule(
+    fixedWindow({
+       mode: 'LIVE',
+        window: '1m',
+        max: 5,
+    })
+)
+
 export async function POST(request: Request) {
+    const session = await requireAdmin();
+
     try {
         const body = await request.json();
 

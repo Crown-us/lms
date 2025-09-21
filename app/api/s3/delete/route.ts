@@ -2,8 +2,10 @@ import {NextResponse} from "next/server";
 import {env} from "@/lib/env";
 import {S3} from "@/lib/S3Client";
 import {DeleteObjectCommand} from "@aws-sdk/client-s3";
+import {requireAdmin} from "@/app/data/admin/require-admin";
 
 export async function DELETE(request: Request) {
+    const session = await requireAdmin();
     try {
         const body = await request.json();
 
