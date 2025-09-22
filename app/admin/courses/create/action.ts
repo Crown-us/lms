@@ -28,9 +28,23 @@ export async function CreateCourse(formData: CourseSchemaType): Promise<ApiRespo
 
     try {
         const req = await request()
-        const decision = await arcjet.protect(req, {
+        const decision = await aj.protect(req, {
             fingerprint: session.user.id,
         })
+
+        if (decision.isDenied()){
+            if(decision.reason.isRateLimit()){
+                return {
+                    status: 'error',
+                    message: "You have been blocked due to rate limit",
+                }
+            } else{
+                return {
+                    status: 'error',
+                    message: "You are a bot! if this a mistake contact our support",
+                }
+            }
+        }
         const validation = courseSchema.safeParse(formData);
 
         if(!validation.success) {

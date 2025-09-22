@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import {adminGetCourses} from "@/app/data/admin/admin-get-courses";
+import {AdminCourseCard} from "@/app/admin/courses/_components/AdminCourseCard";
 
-export default function CoursesPage() {
+export default async function CoursesPage() {
+    const data = await adminGetCourses();
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -24,7 +27,9 @@ export default function CoursesPage() {
 
             {/* Placeholder for courses content */}
             <div>
-                <h1>Here you will see all of the course</h1>
+                {data?.map((course) => (
+                    <AdminCourseCard key={course.id} data={course} />
+                ))}
 
             </div>
         </div>
