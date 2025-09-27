@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {RenderEmptyState, RenderErrorState, RenderUploadingState, RenderUploadedState} from "@/components/file-uploader/RenderState";
 import {toast} from "sonner";
 import { v4 as uuidv4 } from "uuid";
+import {useConstructUrl} from "@/hooks/use-construct-url";
 
 interface UploaderState {
     id: string | null;
@@ -27,7 +28,7 @@ interface iAppProps{
 }
 
 export function Uploader({onChange, value  }: iAppProps) {
-
+    const fileUrl = useConstructUrl(value || ' ')
     const [fileState, setFileState] = useState<UploaderState>({
         error: false,
         file: null,
@@ -36,6 +37,8 @@ export function Uploader({onChange, value  }: iAppProps) {
         progress: 0,
         isDeleting: false,
         fileType: "image",
+        key: value,
+        objectUrl: fileUrl,
     });
 
     // Cleanup object URL untuk mencegah memory leak

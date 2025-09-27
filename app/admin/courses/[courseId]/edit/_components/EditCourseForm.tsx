@@ -1,0 +1,383 @@
+"use client";
+
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {BarChart3, Clock, FileText} from "lucide-react";
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from "@/components/ui/form";
+import {Input} from "@/components/ui/input";
+import {Button} from "@/components/ui/button";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Uploader} from "@/components/file-uploader/Uploader";
+import {Textarea} from "@/components/ui/textarea";
+import {courseLevels, courseSchema, CourseSchemaType, coursesStatus} from "@/lib/zodSchemas";
+import Link from "next/link";
+import {useForm} from "react-hook-form";
+import {zodResolver} from "@hookform/resolvers/zod";
+import {tryCatch} from "@/hooks/try-catch";
+import {CreateCourse} from "@/app/admin/courses/create/action";
+import {toast} from "sonner";
+import {useTransition} from "react";
+import {useRouter} from "next/navigation";
+
+// Data dummy untuk kategori (ganti dengan import yang sesuai jika ada)
+const courseCategories = [
+    "Web Development", "Mobile Development", "Data Science", "Machine Learning",
+    "Artificial Intelligence", "DevOps", "Cybersecurity", "Cloud Computing",
+    "Database Management", "UI/UX Design", "Digital Marketing", "Business Analytics",
+    "Project Management", "Software Testing", "Game Development", "Blockchain",
+    "IoT (Internet of Things)", "Network Administration", "Programming Languages", "Other"
+];
+
+// Component RichTextEditor dummy (ganti dengan import yang sesuai)
+const RichTextEditor = ({ field }: any) => (
+    <Textarea
+        placeholder="Enter detailed course description"
+        className="min-h-[200px]"
+        {...field}
+    />
+);
+
+export function EditCourseForm() {
+    const [isPending, startTransition] = useTransition();
+    const router = useRouter();
+    const form = useForm<CourseSchemaType>({
+        resolver: zodResolver(courseSchema),
+        defaultValues: {
+            title: "",
+            description: "",
+            fileKey: "",
+            price: undefined,
+            duration: undefined,
+            level: "Beginner",
+            category: "",
+            status: "Draft",
+            smallDescription: "",
+            slug: "",
+            thumbnailUrl: "",
+        },
+    });
+
+    const watchTitle = form.watch("title");
+
+    // Fungsi untuk generate slug
+    const generateSlug = () => {
+        if (watchTitle) {
+            const slug = watchTitle
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+            form.setValue("slug", slug);
+        }
+    };
+
+    const onSubmit = async (data: CourseSchemaType) => {
+        startTransition(async () => {
+            const { data: result, error } = await tryCatch(EditCourse(values))
+
+            if(error){
+                toast.error("An unexpected error occurred. Please try again.")
+                return;
+            }
+
+            if(result.status === 'success'){
+                toast.success(result.message)
+                form.reset()
+                router.push("/admin/courses");
+
+            } else if(result.status === 'error'){
+                toast.error(result.message)
+            }
+        })
+    };
+
+    return(
+        <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                {/* Basic Information */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Basic Information
+                        </CardTitle>
+                        <CardDescription>
+                            Provide the essential details about your course.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="title"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Course Title</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Enter course title" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="slug"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>URL Slug</FormLabel>
+                                    <div className="flex gap-2">
+                                        <FormControl>
+                                            <Input placeholder="course-url-slug" className="font-mono" {...field} />
+                                        </FormControl>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={generateSlug}
+                                            disabled={!watchTitle}
+                                        >
+                                            Generate
+                                        </Button>
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="category"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Category</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {courseCategories.map((category) => (
+                                                <SelectItem key={category} value={category}>
+                                                    {category}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="fileKey"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Thumbnail Image</FormLabel>
+                                    <FormControl>
+                                        <Uploader onChange={field.onChange} value={field.value} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="smallDescription"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Short Description</FormLabel>
+                                    <FormControl>
+                                        <Textarea
+                                            placeholder="Brief description for course listings"
+                                            className="min-h-[80px]"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Full Description</FormLabel>
+                                    <FormControl>
+                                        <RichTextEditor field={field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                {/* File Upload - Tambahan untuk fileKey */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Course Materials
+                        </CardTitle>
+                        <CardDescription>
+                            Upload course files and materials.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="fileKey"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Course File Key</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Enter file key or upload identifier"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5" />
+                            Course Settings
+                        </CardTitle>
+                        <CardDescription>
+                            Configure pricing, duration, and difficulty level.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="price"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Price (Rp)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            placeholder="299000"
+                                            {...field}
+                                            value={field.value || ""}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                field.onChange(value === "" ? undefined : Number(value));
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="duration"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Duration (Minutes)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            placeholder="120"
+                                            {...field}
+                                            value={field.value || ""}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                field.onChange(value === "" ? undefined : Number(value));
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="level"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Level</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select level" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {courseLevels.map((level) => (
+                                                <SelectItem key={level} value={level}>
+                                                    {level}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                {/* Status Field - Tambahan jika diperlukan */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Clock className="h-5 w-5" />
+                            Publication Settings
+                        </CardTitle>
+                        <CardDescription>
+                            Set course status and publication options.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {coursesStatus.map((status) => (
+                                                <SelectItem key={status} value={status}>
+                                                    {status}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                <div className="flex items-center gap-4 justify-end">
+                    <Button type="button" variant="outline" asChild>
+                        <Link href="/admin/courses">Cancel</Link>
+                    </Button>
+                    <Button type="submit" disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting ? "Creating..." : "Create Course"}
+                    </Button>
+                </div>
+            </form>
+        </Form>
+    )
+}
