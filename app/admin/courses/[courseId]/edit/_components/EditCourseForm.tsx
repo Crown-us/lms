@@ -13,19 +13,11 @@ import Link from "next/link";
 import {useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {tryCatch} from "@/hooks/try-catch";
-import {CreateCourse} from "@/app/admin/courses/create/action";
+import {editCourse} from "../action";
 import {toast} from "sonner";
 import {useTransition} from "react";
 import {useRouter} from "next/navigation";
-
-// Data dummy untuk kategori (ganti dengan import yang sesuai jika ada)
-const courseCategories = [
-    "Web Development", "Mobile Development", "Data Science", "Machine Learning",
-    "Artificial Intelligence", "DevOps", "Cybersecurity", "Cloud Computing",
-    "Database Management", "UI/UX Design", "Digital Marketing", "Business Analytics",
-    "Project Management", "Software Testing", "Game Development", "Blockchain",
-    "IoT (Internet of Things)", "Network Administration", "Programming Languages", "Other"
-];
+import {AdminCourseSingularType} from "@/app/data/admin/admin-get-courses";
 
 // Component RichTextEditor dummy (ganti dengan import yang sesuai)
 const RichTextEditor = ({ field }: any) => (
@@ -36,23 +28,38 @@ const RichTextEditor = ({ field }: any) => (
     />
 );
 
-export function EditCourseForm() {
+interface iAppProps {
+    data: AdminCourseSingularType
+}
+
+export function EditCourseForm({ data }: iAppProps) {
+    // Definisi courseCategories di dalam component
+    const courseCategories = [
+        'Development',
+        'Business',
+        'Financial',
+        'Artificial Intelligence',
+        'Marketing',
+        'Design',
+    ];
+
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+
     const form = useForm<CourseSchemaType>({
         resolver: zodResolver(courseSchema),
         defaultValues: {
-            title: "",
-            description: "",
-            fileKey: "",
-            price: undefined,
-            duration: undefined,
-            level: "Beginner",
-            category: "",
-            status: "Draft",
-            smallDescription: "",
-            slug: "",
-            thumbnailUrl: "",
+            title: data.title,
+            description: data.description,
+            fileKey: data.fileKey,
+            price: data.price,
+            duration: data.duration,
+            level: data.level,
+            category: data.category as CourseSchemaType["category"],
+            status: data.status,
+            smallDescription: data.smallDescription,
+            slug: data.slug,
+            thumbnailUrl: data.thumbnailUrl || "",
         },
     });
 
@@ -71,21 +78,19 @@ export function EditCourseForm() {
         }
     };
 
-    const onSubmit = async (data: CourseSchemaType) => {
+    const onSubmit = async (formData: CourseSchemaType) => {
         startTransition(async () => {
-            const { data: result, error } = await tryCatch(EditCourse(values))
+            const { data: result, error } = await tryCatch(editCourse(formData, data.id))
 
             if(error){
                 toast.error("An unexpected error occurred. Please try again.")
                 return;
             }
 
-            if(result.status === 'success'){
+            if(result?.status === 'success'){
                 toast.success(result.message)
-                form.reset()
                 router.push("/admin/courses");
-
-            } else if(result.status === 'error'){
+            } else if(result?.status === 'error'){
                 toast.error(result.message)
             }
         })
@@ -169,6 +174,7 @@ export function EditCourseForm() {
                             )}
                         />
 
+                        {/* Fixed Thumbnail Upload Section */}
                         <FormField
                             control={form.control}
                             name="fileKey"
@@ -176,7 +182,28 @@ export function EditCourseForm() {
                                 <FormItem>
                                     <FormLabel>Thumbnail Image</FormLabel>
                                     <FormControl>
-                                        <Uploader onChange={field.onChange} value={field.value} />
+                                        <Uploader
+                                            onChange={field.onChange}
+                                            value={field.value}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Add thumbnailUrl field */}
+                        <FormField
+                            control={form.control}
+                            name="thumbnailUrl"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Thumbnail URL (Optional)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="https://example.com/image.jpg"
+                                            {...field}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -217,37 +244,6 @@ export function EditCourseForm() {
                     </CardContent>
                 </Card>
 
-                {/* File Upload - Tambahan untuk fileKey */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Course Materials
-                        </CardTitle>
-                        <CardDescription>
-                            Upload course files and materials.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <FormField
-                            control={form.control}
-                            name="fileKey"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Course File Key</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter file key or upload identifier"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
-
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -269,11 +265,12 @@ export function EditCourseForm() {
                                         <Input
                                             type="number"
                                             placeholder="299000"
+                                            min="1"
                                             {...field}
                                             value={field.value || ""}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                field.onChange(value === "" ? undefined : Number(value));
+                                                field.onChange(value === "" ? 1 : Number(value));
                                             }}
                                         />
                                     </FormControl>
@@ -291,11 +288,13 @@ export function EditCourseForm() {
                                         <Input
                                             type="number"
                                             placeholder="120"
+                                            min="3"
+                                            max="500"
                                             {...field}
                                             value={field.value || ""}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                field.onChange(value === "" ? undefined : Number(value));
+                                                field.onChange(value === "" ? 3 : Number(value));
                                             }}
                                         />
                                     </FormControl>
@@ -330,7 +329,6 @@ export function EditCourseForm() {
                     </CardContent>
                 </Card>
 
-                {/* Status Field - Tambahan jika diperlukan */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -373,8 +371,8 @@ export function EditCourseForm() {
                     <Button type="button" variant="outline" asChild>
                         <Link href="/admin/courses">Cancel</Link>
                     </Button>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? "Creating..." : "Create Course"}
+                    <Button type="submit" disabled={isPending}>
+                        {isPending ? "Updating..." : "Update Course"}
                     </Button>
                 </div>
             </form>
