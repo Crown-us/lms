@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {EditCourseForm} from "@/app/admin/courses/[courseId]/edit/_components/EditCourseForm";
+import {CourseStructure} from "@/app/admin/courses/[courseId]/edit/_components/CourseStructure";
 
 interface PageProps {
     params: Promise<{
@@ -57,7 +58,7 @@ export default async function EditRoute({ params }: PageProps) {
                                 <CardDescription>Manage lessons, modules, and course content</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <p>Course structure management will be available here.</p>
+                                <CourseStructure/>
                             </CardContent>
                         </Card>
                     </TabsContent>
