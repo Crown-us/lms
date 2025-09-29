@@ -1,5 +1,4 @@
 "use client";
-
 import {
     DndContext,
     KeyboardSensor,
@@ -20,6 +19,16 @@ import {
 } from "@dnd-kit/sortable";
 import {useState} from "react";
 import {CSS} from '@dnd-kit/utilities';
+import {AdminCourseSingularType} from "@/app/data/admin/admin-get-course";
+
+interface iAppProps {
+    data: AdminCourseSingularType
+}
+
+interface SortableItemProps {
+    id: string;
+    chil
+}
 
 function SortableItem(props: { id: string }) {
     const {
@@ -29,12 +38,10 @@ function SortableItem(props: { id: string }) {
         transform,
         transition,
     } = useSortable({id: props.id});
-
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
-
     return (
         <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
             Chapter {props.id}
@@ -42,8 +49,20 @@ function SortableItem(props: { id: string }) {
     );
 }
 
-export function CourseStructure() {
-    const [items, setItems] = useState(['1', '2', '3']);
+export function CourseStructure({ data }: iAppProps) {
+    const initialItems = data?.chapter?.map((chapter) => ({
+        id: chapter.id,
+        title: chapter.title,
+        order: chapter.position,
+        isOpen: true,
+        lessons: chapter.lessons.map((lesson) => ({
+            id: lesson.id,
+            title: lesson.title,
+            order: lesson.position,
+        }))
+    })) || [];
+
+    const [items, setItems] = useState(initialItems);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -54,12 +73,10 @@ export function CourseStructure() {
 
     function handleDragEnd(event: DragEndEvent) {
         const {active, over} = event;
-
         if (over && active.id !== over.id) {
-            setItems((items) => {
-                const oldIndex = items.indexOf(String(active.id));
-                const newIndex = items.indexOf(String(over.id));
-
+            setItems((items: any) => {
+                const oldIndex = items.findIndex((item: any) => item.id === active.id);
+                const newIndex = items.findIndex((item: any) => item.id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
@@ -77,10 +94,10 @@ export function CourseStructure() {
                 </CardHeader>
                 <CardContent>
                     <SortableContext
-                        items={items}
+                        items={items.map((item: any) => item.id)}
                         strategy={verticalListSortingStrategy}
                     >
-                        {items.map(id => <SortableItem key={id} id={id} />)}
+                        {items.map((item: any) => <SortableItem key={item.id} id={item.id} />)}
                     </SortableContext>
                 </CardContent>
             </Card>

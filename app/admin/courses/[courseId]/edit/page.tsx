@@ -1,4 +1,4 @@
-import { adminGetCourses } from "@/app/data/admin/admin-get-courses";
+import { adminGetCourse } from "@/app/data/admin/admin-get-course"; // Ganti import
 import { notFound } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
@@ -16,17 +16,12 @@ export default async function EditRoute({ params }: PageProps) {
     const { courseId } = await params;
 
     try {
-        const courses = await adminGetCourses();
-        const data = courses.find(course => course.id === courseId);
-
-        if (!data) {
-            console.log(`Course with ID ${courseId} not found`);
-            notFound();
-        }
+        // Ganti pakai adminGetCourse untuk single course dengan chapters
+        const data = await adminGetCourse(courseId);
 
         // Debug: Log data untuk memastikan struktur benar
         console.log('Course data:', data);
-        console.log('Course category:', data.category);
+
 
         return (
             <div className="p-6">
@@ -58,7 +53,7 @@ export default async function EditRoute({ params }: PageProps) {
                                 <CardDescription>Manage lessons, modules, and course content</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <CourseStructure/>
+                                <CourseStructure data={data}/>
                             </CardContent>
                         </Card>
                     </TabsContent>

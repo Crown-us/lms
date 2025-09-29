@@ -4,11 +4,44 @@ import {requireAdmin} from "@/app/data/admin/require-admin";
 import {ApiResponse} from "@/lib/types";
 import {courseSchema, CourseSchemaType} from "@/lib/zodSchemas";
 import {prisma} from "@/lib/db";
+import arcjet from "@/lib/arcjet";
+import {detectBot, fixedWindow, request} from "@arcjet/next";
+
+const aj = arcjet.withRule(
+    detectBot({
+        mode: 'LIVE',
+        allow: [],
+    })
+
+).withRule(
+    fixedWindow({
+        mode: 'LIVE',
+        window: '1m',
+        max: 5,
+    })
+)
 
 export async function editCourse(data: CourseSchemaType, courseId: string): Promise<ApiResponse> {
     const user = await requireAdmin()
 
     try {
+        const req = await request()
+        const decision = await aj.protect(req, {
+            fingerprint: user.user.id
+        })
+        if (decision.isDenied()){
+            if(decision.reason.isRateLimit()){
+                return {
+                    status: 'error',
+                    message: "You have been blocked due to rate limit",
+                }
+            } else{
+                return {
+                    status: 'error',
+                    message: "You are a bot! if this a mistake contact our support",
+                }
+            }
+        }
         const result = courseSchema.safeParse(data);
 
         if(!result.success) {
