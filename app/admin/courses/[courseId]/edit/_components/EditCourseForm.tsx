@@ -18,31 +18,28 @@ import {toast} from "sonner";
 import {useTransition} from "react";
 import {useRouter} from "next/navigation";
 import {AdminCourseSingularType} from "@/app/data/admin/admin-get-courses";
+import dynamic from 'next/dynamic';
 
-// Component RichTextEditor dummy (ganti dengan import yang sesuai)
-const RichTextEditor = ({ field }: any) => (
-    <Textarea
-        placeholder="Enter detailed course description"
-        className="min-h-[200px]"
-        {...field}
-    />
-);
+// Dynamic import untuk RichTextEditor (sama seperti create)
+const RichTextEditor = dynamic(() => import('@/components/rich-text-editor/Editor').then(mod => mod.RichTextEditor), {
+    ssr: false,
+    loading: () => <div className="w-full p-4 border rounded-lg min-h-[200px] animate-pulse bg-muted" />,
+});
+
+// Data Kategori (sama seperti create)
+const courseCategories = [
+    "Web Development", "Mobile Development", "Data Science", "Machine Learning",
+    "Artificial Intelligence", "DevOps", "Cybersecurity", "Cloud Computing",
+    "Database Management", "UI/UX Design", "Digital Marketing", "Business Analytics",
+    "Project Management", "Software Testing", "Game Development", "Blockchain",
+    "IoT (Internet of Things)", "Network Administration", "Programming Languages", "Other"
+];
 
 interface iAppProps {
     data: AdminCourseSingularType
 }
 
 export function EditCourseForm({ data }: iAppProps) {
-    // Definisi courseCategories di dalam component
-    const courseCategories = [
-        'Development',
-        'Business',
-        'Financial',
-        'Artificial Intelligence',
-        'Marketing',
-        'Design',
-    ];
-
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -174,7 +171,6 @@ export function EditCourseForm({ data }: iAppProps) {
                             )}
                         />
 
-                        {/* Fixed Thumbnail Upload Section */}
                         <FormField
                             control={form.control}
                             name="fileKey"
@@ -185,24 +181,6 @@ export function EditCourseForm({ data }: iAppProps) {
                                         <Uploader
                                             onChange={field.onChange}
                                             value={field.value}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        {/* Add thumbnailUrl field */}
-                        <FormField
-                            control={form.control}
-                            name="thumbnailUrl"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Thumbnail URL (Optional)</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="https://example.com/image.jpg"
-                                            {...field}
                                         />
                                     </FormControl>
                                     <FormMessage />
@@ -265,12 +243,11 @@ export function EditCourseForm({ data }: iAppProps) {
                                         <Input
                                             type="number"
                                             placeholder="299000"
-                                            min="1"
                                             {...field}
                                             value={field.value || ""}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                field.onChange(value === "" ? 1 : Number(value));
+                                                field.onChange(value === "" ? undefined : Number(value));
                                             }}
                                         />
                                     </FormControl>
@@ -288,13 +265,11 @@ export function EditCourseForm({ data }: iAppProps) {
                                         <Input
                                             type="number"
                                             placeholder="120"
-                                            min="3"
-                                            max="500"
                                             {...field}
                                             value={field.value || ""}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                field.onChange(value === "" ? 3 : Number(value));
+                                                field.onChange(value === "" ? undefined : Number(value));
                                             }}
                                         />
                                     </FormControl>
